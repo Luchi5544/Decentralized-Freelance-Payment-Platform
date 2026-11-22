@@ -311,8 +311,10 @@ describe("processContractEvents", () => {
       makeEvent("rated", { escrow_id: nativeToScVal(7n, { type: "u64" }) }, 11),
       makeTopicEvent("raised", 7n, { dispute_id: nativeToScVal(0n, { type: "u64" }) }, 12),
     ];
+    const mockRpc = new MockSorobanRpcServer("https://mock-rpc.local", 12);
+    mockRpc.enqueueEvents(events as any);
     const source = {
-      getEvents: vi.fn(async () => ({ events, latestLedger: 12 })),
+      getEvents: vi.fn((req) => mockRpc.getEvents(req)),
     };
     const cursor = { get: async () => 9, set: vi.fn(async () => undefined) };
     const dispatch = vi.fn(async (_event: ContractEventLike) => undefined);

@@ -1604,3 +1604,61 @@ fn create_rejects_milestone_maps_whose_keys_are_not_sorted() {
         "unexpected failure: {err}"
     );
 }
+
+
+// ---------------------------------------------------------------------------
+// Gas and Resource Profiling Benchmarks (issue #380)
+// ---------------------------------------------------------------------------
+
+fn run_milestone_profile(milestone_count: u32) -> (u64, u64) {
+    let f = fixture();
+    let amounts: std::vec::Vec<i128> = (0..milestone_count).map(|_| 100).collect();
+    let ms = milestones(&f.env, &amounts);
+
+    f.env.budget().reset_unlimited();
+
+    let id = f.c().create(&f.client, &f.freelancer, &ms, &f.token);
+    f.mint(10_000_000);
+    f.c().fund(&id);
+
+    f.env.budget().reset_unlimited();
+    for i in 0..milestone_count {
+        f.c().release(&id, &i);
+    }
+
+    let cpu = f.env.budget().cpu_instruction_cost();
+    let mem = f.env.budget().memory_byte_cost();
+    (cpu, mem)
+}
+
+#[test]
+fn profile_escrow_milestones_1() {
+    let (cpu, mem) = run_milestone_profile(1);
+    std::println!("[GAS_PROFILE] milestones: 1 | cpu: {} | mem: {}", cpu, mem);
+    assert!(cpu < 20_000_000, "1 milestone release CPU exceeded budget");
+    assert!(mem < 5_000_000, "1 milestone release Memory exceeded budget");
+}
+
+#[test]
+fn profile_escrow_milestones_5() {
+    let (cpu, mem) = run_milestone_profile(5);
+    std::println!("[GAS_PROFILE] milestones: 5 | cpu: {} | mem: {}", cpu, mem);
+    assert!(cpu < 40_000_000, "5 milestone release CPU exceeded budget");
+    assert!(mem < 10_000_000, "5 milestone release Memory exceeded budget");
+}
+
+#[test]
+fn profile_escrow_milestones_10() {
+    let (cpu, mem) = run_milestone_profile(10);
+    std::println!("[GAS_PROFILE] milestones: 10 | cpu: {} | mem: {}", cpu, mem);
+    assert!(cpu < 70_000_000, "10 milestone release CPU exceeded budget");
+    assert!(mem < 20_000_000, "10 milestone release Memory exceeded budget");
+}
+
+#[test]
+fn profile_escrow_milestones_20() {
+    let (cpu, mem) = run_milestone_profile(20);
+    std::println!("[GAS_PROFILE] milestones: 20 | cpu: {} | mem: {}", cpu, mem);
+    assert!(cpu < 100_000_000, "20 milestone release CPU exceeded protocol limit");
+    assert!(mem < 40_000_000, "20 milestone release Memory exceeded protocol limit");
+}

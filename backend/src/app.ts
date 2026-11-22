@@ -202,6 +202,7 @@ export async function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/webhooks", webhooksRouter);
   app.use("/api/admin/indexer", adminIndexerRouter);
+  app.use("/api/admin", adminIndexerRouter);
 
   // Unmatched paths fall through to Express's built-in final handler, which
   // answers HTML — unlike every route above. Answer them as JSON instead.
