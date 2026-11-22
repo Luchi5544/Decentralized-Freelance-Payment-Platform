@@ -1226,6 +1226,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/api/messages/{jobId}/stream",
+  tags: ["Messages"],
+  summary: "Stream real-time messages via Server-Sent Events (participants only)",
+  security: auth,
+  request: {
+    params: z.object({ jobId: z.string() }),
+    query: z.object({ token: z.string().optional() }),
+  },
+  responses: {
+    200: { description: "Text event stream of chat messages" },
+    401: errors[401],
+    403: errors[403],
+    404: errors[404],
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/api/messages/{jobId}",
   tags: ["Messages"],
   summary: "Read a job's conversation (participants only)",

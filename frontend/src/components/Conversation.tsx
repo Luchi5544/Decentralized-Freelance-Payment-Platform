@@ -120,6 +120,56 @@ export default function Conversation({ jobId }: { jobId: string }) {
     userSentMessageRef.current = false;
   }, [messages]);
 
+  // Real-time chat message stream (issue #250: SSE gateway with polling fallback)
+  useEffect(() => {
+    if (!publicKey || typeof EventSource === "undefined") return;
+
+    let eventSource: EventSource | null = null;
+    let isCancelled = false;
+
+    async function initStream() {
+      try {
+        const token = await authenticate(publicKey!, signMessage);
+        if (isCancelled) return;
+
+        const url = `/api/messages/${encodeURIComponent(jobId)}/stream?token=${encodeURIComponent(token)}`;
+        eventSource = new EventSource(url);
+
+        eventSource.onmessage = (event) => {
+          try {
+            const newMsg = JSON.parse(event.data) as MessageApi;
+            if (!newMsg || !newMsg.id) return;
+
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+
+            if (newMsg.sender?.stellarAddress !== publicKey) {
+              void markMessagesRead(jobId, token);
+            }
+          } catch {
+            // Ignore malformed event payload
+          }
+        };
+
+        eventSource.onerror = () => {
+          // Close on error; polling provides uninterrupted fallback
+          eventSource?.close();
+        };
+      } catch {
+        // Fall back to polling
+      }
+    }
+
+    void initStream();
+
+    return () => {
+      isCancelled = true;
+      eventSource?.close();
+    };
+  }, [jobId, publicKey, signMessage]);
+
   // Poll for new messages every 5 seconds
   useEffect(() => {
     if (!publicKey) return;
