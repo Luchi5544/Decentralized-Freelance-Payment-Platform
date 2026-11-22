@@ -24,6 +24,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { milestonesRouter } from "./routes/milestones";
 import { webhooksRouter } from "./routes/webhooks";
 import { adminIndexerRouter } from "./routes/adminIndexer";
+import { messagesRouter } from "./routes/messages";
 import { tracingMiddleware } from "./lib/tracing";
 import { metricsMiddleware } from "./lib/metrics";
 import { metricsRouter } from "./routes/metrics";
@@ -202,6 +203,7 @@ export async function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/webhooks", webhooksRouter);
   app.use("/api/admin/indexer", adminIndexerRouter);
+  app.use("/api/messages", messagesRouter);
 
   // Unmatched paths fall through to Express's built-in final handler, which
   // answers HTML — unlike every route above. Answer them as JSON instead.

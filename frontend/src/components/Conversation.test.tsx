@@ -235,4 +235,86 @@ describe("Conversation", () => {
       expect(scrollIntoViewMock).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("Real-time SSE Gateway (Issue #250)", () => {
+    class MockEventSource {
+      static instances: MockEventSource[] = [];
+      url: string;
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      onerror: (() => void) | null = null;
+      close = vi.fn();
+
+      constructor(url: string) {
+        this.url = url;
+        MockEventSource.instances.push(this);
+      }
+    }
+
+    beforeEach(() => {
+      MockEventSource.instances = [];
+      vi.stubGlobal("EventSource", MockEventSource);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("connects to the SSE stream with authenticated token", async () => {
+      h.fetchMessages.mockResolvedValue([]);
+
+      render(<Conversation jobId="job-1" />);
+
+      await waitFor(() => {
+        expect(MockEventSource.instances.length).toBe(1);
+        expect(MockEventSource.instances[0].url).toContain("/api/messages/job-1/stream?token=jwt-1");
+      });
+    });
+
+    it("receives incoming messages via SSE in real time and marks counterparty message as read", async () => {
+      h.fetchMessages.mockResolvedValue([]);
+
+      render(<Conversation jobId="job-1" />);
+      await screen.findByText("No messages yet.");
+
+      await waitFor(() => {
+        expect(MockEventSource.instances.length).toBe(1);
+      });
+
+      const sse = MockEventSource.instances[0];
+      const incoming = message({
+        id: "m-sse-1",
+        body: "Real-time message delivered instantaneously",
+        sender: { stellarAddress: OTHER },
+      });
+
+      act(() => {
+        sse.onmessage?.(new MessageEvent("message", { data: JSON.stringify(incoming) }));
+      });
+
+      expect(await screen.findByText("Real-time message delivered instantaneously")).toBeTruthy();
+      await waitFor(() => {
+        expect(h.markMessagesRead).toHaveBeenCalledWith("job-1", "jwt-1");
+      });
+    });
+
+    it("falls back gracefully when SSE fails without throwing an error", async () => {
+      h.fetchMessages.mockResolvedValue([]);
+
+      render(<Conversation jobId="job-1" />);
+      await screen.findByText("No messages yet.");
+
+      await waitFor(() => {
+        expect(MockEventSource.instances.length).toBe(1);
+      });
+
+      const sse = MockEventSource.instances[0];
+      act(() => {
+        sse.onerror?.();
+      });
+
+      expect(sse.close).toHaveBeenCalled();
+      // Conversation continues functioning normally
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+  });
 });
