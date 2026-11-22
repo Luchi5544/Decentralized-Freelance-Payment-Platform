@@ -34,7 +34,20 @@ const h = vi.hoisted(() => ({
 
 // The auth routes are the only ones these tests reach; everything else in the
 // app is never invoked, so a single-model mock is enough.
-vi.mock("../db", () => ({ prisma: { authNonce: h.authNonce } }));
+vi.mock("../db", () => ({
+  prisma: { authNonce: h.authNonce },
+  // /health is reached below to prove the auth limiter does not apply to it.
+  checkReplicationHealth: vi.fn(async () => ({
+    configured: false,
+    connected: false,
+    inRecovery: null,
+    lagMs: null,
+    lagSeconds: null,
+    thresholdMs: 30_000,
+    thresholdSeconds: 30,
+    degraded: false,
+  })),
+}));
 
 /** Start a fresh app (and therefore fresh limiter stores) for one test. */
 async function withApp<T>(fn: (baseUrl: string) => Promise<T>): Promise<T> {
