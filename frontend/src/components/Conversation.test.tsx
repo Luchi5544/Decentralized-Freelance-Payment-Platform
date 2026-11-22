@@ -96,6 +96,66 @@ describe("Conversation", () => {
     expect(screen.queryByText(/unread/)).toBeNull();
   });
 
+  describe("Redundant markMessagesRead prevention (Issue #254)", () => {
+    it("does not call markMessagesRead when there are no unread counterparty messages", async () => {
+      h.fetchMessages.mockResolvedValue([
+        message({ id: "m1", sender: { stellarAddress: OTHER }, readAt: "2026-01-01T00:00:00.000Z", body: "Message from other" }),
+        message({ id: "m2", sender: { stellarAddress: ME }, readAt: null, body: "Message from me" }),
+      ]);
+
+      render(<Conversation jobId="job-1" />);
+
+      await screen.findByText("Message from other");
+      expect(h.markMessagesRead).not.toHaveBeenCalled();
+    });
+
+    it("does not trigger markMessagesRead on polling cycles if no new unread messages arrived", async () => {
+      vi.useFakeTimers();
+      h.fetchMessages.mockResolvedValue([
+        message({ id: "m1", sender: { stellarAddress: OTHER }, readAt: "2026-01-01T00:00:00.000Z", body: "Already read" }),
+      ]);
+
+      render(<Conversation jobId="job-1" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(h.markMessagesRead).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(h.markMessagesRead).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("triggers markMessagesRead during polling when a new unread counterparty message arrives", async () => {
+      vi.useFakeTimers();
+      h.fetchMessages.mockResolvedValueOnce([
+        message({ id: "m1", sender: { stellarAddress: OTHER }, readAt: "2026-01-01T00:00:00.000Z", body: "Already read" }),
+      ]);
+
+      render(<Conversation jobId="job-1" />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(h.markMessagesRead).not.toHaveBeenCalled();
+
+      h.fetchMessages.mockResolvedValueOnce([
+        message({ id: "m1", sender: { stellarAddress: OTHER }, readAt: "2026-01-01T00:00:00.000Z", body: "Already read" }),
+        message({ id: "m2", sender: { stellarAddress: OTHER }, readAt: null, body: "New unread message" }),
+      ]);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(h.markMessagesRead).toHaveBeenCalledTimes(1);
+      expect(h.markMessagesRead).toHaveBeenCalledWith("job-1", "jwt-1");
+      vi.useRealTimers();
+    });
+  });
+
   it("sends a message and shows it in the thread", async () => {
     h.fetchMessages.mockResolvedValue([]);
     h.sendMessage.mockResolvedValue(message({ id: "m9", body: "Starting on it now", senderId: "user-me" }));
