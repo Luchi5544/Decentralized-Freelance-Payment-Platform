@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import swaggerUi from "swagger-ui-express";
 
 import { config } from "./config";
-import { prisma } from "./db";
+import { prisma, checkReplicationHealth } from "./db";
 import { docsEnabled, openApiDocument } from "./openapi";
 import { isAllowedOrigin, parseList } from "./lib/access";
 import { jsonReplacer } from "./lib/json";
@@ -24,6 +24,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { milestonesRouter } from "./routes/milestones";
 import { webhooksRouter } from "./routes/webhooks";
 import { adminIndexerRouter } from "./routes/adminIndexer";
+import { messagesRouter } from "./routes/messages";
 import { tracingMiddleware } from "./lib/tracing";
 import { metricsMiddleware } from "./lib/metrics";
 import { metricsRouter } from "./routes/metrics";
@@ -155,12 +156,21 @@ export async function createApp() {
     const indexerOk = await checkIndexerHealth();
     const rpcOk = await checkSorobanRpcHealth();
 
+    // Read replica lag is only probed when REPLICA_URL is configured, so
+    // single-node deployments keep their existing health payload (issue #381).
+    const replication = await checkReplicationHealth({
+      replicaUrl: config.REPLICA_URL,
+      thresholdMs: config.REPLICA_LAG_THRESHOLD_MS,
+    });
+    const replicationStatus = replication.configured ? { replication } : {};
+
     if (!dbOk || !indexerOk) {
       return res.status(503).json({
         status: "unhealthy",
         db: dbOk,
         indexer: indexerOk,
         rpc: rpcOk,
+        ...replicationStatus,
       });
     }
 
@@ -170,6 +180,22 @@ export async function createApp() {
         db: dbOk,
         indexer: indexerOk,
         rpc: false,
+        ...replicationStatus,
+      });
+    }
+
+    // A configured replica that is unreachable or too far behind means reads
+    // may be stale, so the service is degraded even though the primary is up.
+    if (replication.configured && (!replication.connected || replication.degraded)) {
+      return res.status(503).json({
+        status: "degraded",
+        db: dbOk,
+        indexer: indexerOk,
+        rpc: rpcOk,
+        ...replicationStatus,
+        message: replication.connected
+          ? `Read replica lag ${replication.lagSeconds ?? "unknown"}s exceeds ${replication.thresholdSeconds}s threshold`
+          : `Read replica is unreachable${replication.error ? `: ${replication.error}` : ""}`,
       });
     }
 
@@ -182,11 +208,18 @@ export async function createApp() {
         db: true,
         indexer: false,
         rpc: true,
+        ...replicationStatus,
         message: "Indexer has not advanced recently",
       });
     }
 
-    return res.json({ status: "ok", db: true, indexer: true, rpc: true });
+    return res.json({
+      status: "ok",
+      db: true,
+      indexer: true,
+      rpc: true,
+      ...replicationStatus,
+    });
   };
 
   app.get("/health", handleHealth);
@@ -202,7 +235,7 @@ export async function createApp() {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/webhooks", webhooksRouter);
   app.use("/api/admin/indexer", adminIndexerRouter);
-  app.use("/api/admin", adminIndexerRouter);
+  app.use("/api/messages", messagesRouter);
 
   // Unmatched paths fall through to Express's built-in final handler, which
   // answers HTML — unlike every route above. Answer them as JSON instead.
@@ -236,14 +269,18 @@ async function checkIndexerStaleness(): Promise<boolean> {
 
 /** Check database connectivity with a cheap query and timeout guard */
 async function checkDbHealth(): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
   try {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Database health check timed out")), 3000),
-    );
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Database health check timed out")), 3000);
+    });
     await Promise.race([prisma.$queryRaw`SELECT 1`, timeout]);
     return true;
   } catch {
     return false;
+  } finally {
+    // Avoid a late unhandled rejection when the query wins the race.
+    if (timer) clearTimeout(timer);
   }
 }
 

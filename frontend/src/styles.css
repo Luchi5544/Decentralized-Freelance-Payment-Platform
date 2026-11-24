@@ -692,3 +692,38 @@ svg {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.freelancer-directory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.freelancer-directory-table th,
+.freelancer-directory-table td {
+  padding: 0.7rem;
+  text-align: start;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 639px) {
+  .freelancer-directory-table,
+  .freelancer-directory-table tbody {
+    display: block;
+  }
+  .freelancer-directory-table thead {
+    display: none;
+  }
+  .freelancer-directory-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .freelancer-directory-table td {
+    border: 0;
+  }
+  .freelancer-directory-table td:first-child {
+    grid-column: 1 / -1;
+  }
+}
