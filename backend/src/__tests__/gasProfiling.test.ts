@@ -37,6 +37,6 @@ describe("Soroban Smart Contract Gas Profiling & Budget Caps (issue #380)", () =
     expect(testContent).toContain("profile_escrow_milestones_10");
     expect(testContent).toContain("profile_escrow_milestones_20");
     expect(testContent).toContain("cpu_instruction_cost");
-    expect(testContent).toContain("memory_byte_cost");
+    expect(testContent).toMatch(/memory_bytes?_cost/);
   });
 });

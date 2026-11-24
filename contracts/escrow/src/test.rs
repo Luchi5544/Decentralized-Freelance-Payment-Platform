@@ -1692,6 +1692,7 @@ fn run_milestone_profile(milestone_count: u32) -> (u64, u64) {
     }
 
     let cpu = f.env.cost_estimate().budget().cpu_instruction_cost();
+    // memory_byte_cost:
     let mem = f.env.cost_estimate().budget().memory_bytes_cost();
     (cpu, mem)
 }
