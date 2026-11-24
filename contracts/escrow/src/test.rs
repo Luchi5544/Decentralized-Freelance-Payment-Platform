@@ -1684,21 +1684,15 @@ fn create_rejects_milestone_maps_whose_keys_are_not_sorted() {
 fn run_milestone_profile(milestone_count: u32) -> (u64, u64) {
     let f = fixture();
     let amounts: std::vec::Vec<i128> = (0..milestone_count).map(|_| 100).collect();
-    let ms = milestones(&f.env, &amounts);
+    let id = f.funded(&amounts);
 
-    f.env.budget().reset_unlimited();
-
-    let id = f.c().create(&f.client, &f.freelancer, &ms, &f.token);
-    f.mint(10_000_000);
-    f.c().fund(&id);
-
-    f.env.budget().reset_unlimited();
+    f.env.cost_estimate().budget().reset_unlimited();
     for i in 0..milestone_count {
-        f.c().release(&id, &i);
+        f.c().release_milestone(&id, &i);
     }
 
-    let cpu = f.env.budget().cpu_instruction_cost();
-    let mem = f.env.budget().memory_byte_cost();
+    let cpu = f.env.cost_estimate().budget().cpu_instruction_cost();
+    let mem = f.env.cost_estimate().budget().memory_bytes_cost();
     (cpu, mem)
 }
 

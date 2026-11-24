@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import React, { useCallback, useEffect, useState } from "react";
+import { useWallet } from "../hooks/wallet-context";
 import {
-  getPendingSessionExpiredRequest,
-  resolvePendingSessionExpiredRequest,
-  subscribeToSessionExpired,
-} from '../lib/apiClient';
+  authenticate,
+  onSessionExpired,
+  resolveSessionExpired,
+  rejectSessionExpired,
+} from "../lib/api";
 
 interface SessionExpiredModalState {
   pending: boolean;
@@ -13,7 +14,7 @@ interface SessionExpiredModalState {
 }
 
 const SessionExpiredModal: React.FC = () => {
-  const { address, walletType, authenticate, disconnect } = useAuth();
+  const { publicKey, signMessage, disconnect } = useWallet();
   const [state, setState] = useState<SessionExpiredModalState>({
     pending: false,
     submitting: false,
@@ -21,26 +22,17 @@ const SessionExpiredModal: React.FC = () => {
   });
 
   useEffect(() => {
-    const sync = () => {
-      const pending = getPendingSessionExpiredRequest() !== null;
-      setState((prev) => {
-        if (prev.pending === pending) {
-          return prev;
-        }
-        return { pending, submitting: false, error: null };
-      });
-    };
-
-    sync();
-    const unsubscribe = subscribeToSessionExpired(sync);
+    const unsubscribe = onSessionExpired(() => {
+      setState({ pending: true, submitting: false, error: null });
+    });
     return unsubscribe;
   }, []);
 
   const handleConfirm = useCallback(async () => {
-    if (!address || !walletType) {
+    if (!publicKey) {
       setState((prev) => ({
         ...prev,
-        error: 'No connected wallet found. Please reconnect your wallet.',
+        error: "No connected wallet found. Please reconnect your wallet.",
       }));
       return;
     }
@@ -48,18 +40,18 @@ const SessionExpiredModal: React.FC = () => {
     setState((prev) => ({ ...prev, submitting: true, error: null }));
 
     try {
-      await authenticate(address, walletType, { fresh: true });
-      resolvePendingSessionExpiredRequest(true);
+      const freshToken = await authenticate(publicKey, signMessage, { fresh: true });
+      await resolveSessionExpired(freshToken);
       setState({ pending: false, submitting: false, error: null });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Failed to re-authenticate. Please try again.';
+        err instanceof Error ? err.message : "Failed to re-authenticate. Please try again.";
       setState((prev) => ({ ...prev, submitting: false, error: message }));
     }
-  }, [address, walletType, authenticate]);
+  }, [publicKey, signMessage]);
 
   const handleDismiss = useCallback(() => {
-    resolvePendingSessionExpiredRequest(false);
+    rejectSessionExpired();
     setState({ pending: false, submitting: false, error: null });
     disconnect();
   }, [disconnect]);
@@ -105,7 +97,7 @@ const SessionExpiredModal: React.FC = () => {
             onClick={handleConfirm}
             disabled={state.submitting}
           >
-            {state.submitting ? 'Re-authenticating…' : 'Re-authenticate'}
+            {state.submitting ? "Re-authenticating…" : "Re-authenticate"}
           </button>
         </div>
       </div>

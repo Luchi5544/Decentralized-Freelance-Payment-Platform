@@ -28,7 +28,8 @@ import { useWallet } from "../hooks/wallet-context";
 import { ASSETS, formatAmount, getAsset, toBaseUnits } from "../lib/assets";
 import { authenticate, createJob, linkEscrowId } from "../lib/api";
 import { freelancerFromInvite } from "../lib/invite";
-import { estimateFiat, useFiatRates } from "../lib/prices";
+import { estimateFiat } from "../lib/prices";
+import { useFiatRates } from "../hooks/useFiatRates";
 import { MAX_JOB_TAGS, tagsByCategory } from "../lib/tags";
 import { CONTRACT_ADDRESSES, explorerTxUrl } from "../lib/stellar";
 import {

@@ -308,9 +308,9 @@ describe("processContractEvents", () => {
     // One event stream per contract, as the RPC would return from a single
     // batch response once all three ids are in the same filter.
     const events = [
-      makeEvent("funded", { escrow_id: nativeToScVal(7n, { type: "u64" }) }, 10),
-      makeEvent("rated", { escrow_id: nativeToScVal(7n, { type: "u64" }) }, 11),
-      makeTopicEvent("raised", 7n, { dispute_id: nativeToScVal(0n, { type: "u64" }) }, 12),
+      { ...makeEvent("funded", { escrow_id: nativeToScVal(7n, { type: "u64" }) }, 10), contractId: escrow, type: "contract" },
+      { ...makeEvent("rated", { escrow_id: nativeToScVal(7n, { type: "u64" }) }, 11), contractId: reputation, type: "contract" },
+      { ...makeTopicEvent("raised", 7n, { dispute_id: nativeToScVal(0n, { type: "u64" }) }, 12), contractId: dispute, type: "contract" },
     ];
     const mockRpc = new MockSorobanRpcServer("https://mock-rpc.local", 12);
     mockRpc.enqueueEvents(events as any);
