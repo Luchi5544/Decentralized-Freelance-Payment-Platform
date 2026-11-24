@@ -88,9 +88,10 @@ export function sanitizeDeliverable(input: {
   if (!dataUrl || dataUrl[2].length % 4 !== 0) return undefined;
 
   const fileType = canonicalMime(dataUrl[1]);
+  if (!Object.prototype.hasOwnProperty.call(formats, fileType)) return undefined;
   const format = formats[fileType as keyof typeof formats];
   const fileName = sanitizeText(input.fileName);
-  if (!format || !format.extensions.test(fileName) || /[\\/]/.test(fileName)) return undefined;
+  if (!format.extensions.test(fileName) || /[\\/]/.test(fileName)) return undefined;
   if (input.fileType && canonicalMime(input.fileType) !== fileType) return undefined;
 
   const bytes = Buffer.from(dataUrl[2], "base64");

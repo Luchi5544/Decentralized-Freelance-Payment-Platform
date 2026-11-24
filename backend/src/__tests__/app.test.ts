@@ -324,9 +324,21 @@ describe("POST /api/milestones/:id/deliverables request validation", () => {
     });
   });
 
+  it.each([
+    ["preview.png", "image/png", "89504e470d0a1a0a"],
+    ["preview.jpg", "image/jpeg", "ffd8ffe0"],
+  ])("validates the signature for %s", (fileName, fileType, header) => {
+    const bytes = Buffer.from(header, "hex");
+    const fileUrl = `data:${fileType};base64,${bytes.toString("base64")}`;
+    const result = createDeliverableSchema.parse({ fileName, fileUrl });
+    expect(result).toMatchObject({ fileName, fileType, fileSize: bytes.length });
+  });
+
   it("rejects malformed URLs, non-positive sizes, and oversized fields", () => {
     expect(createDeliverableSchema.safeParse({ ...valid, fileUrl: "not-a-url" }).success).toBe(false);
     expect(createDeliverableSchema.safeParse({ ...valid, fileSize: 0 }).success).toBe(false);
+    expect(createDeliverableSchema.safeParse({ ...valid, fileSize: 23 }).success).toBe(false);
+    expect(createDeliverableSchema.safeParse({ ...valid, fileType: "image/png" }).success).toBe(false);
     expect(createDeliverableSchema.safeParse({ ...valid, description: "x".repeat(1001) }).success).toBe(false);
   });
 });
