@@ -11,6 +11,7 @@ import { isAllowedOrigin, parseList } from "./lib/access";
 import { jsonReplacer } from "./lib/json";
 import { sendCachedJson } from "./lib/cache";
 import { checkSorobanRpcHealth } from "./lib/soroban";
+import { requireJsonContentType } from "./middleware/contentType";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFound";
 import { createAuthRateLimiter } from "./middleware/rateLimit";
@@ -103,6 +104,7 @@ export async function createApp() {
     }),
   );
 
+  app.use("/api", requireJsonContentType);
   app.use(express.json({ limit: "10mb" }));
   // Prisma rows carry BigInt ids, which `JSON.stringify` throws on; without this
   // any route that returns a job or dispute row would 500 after a successful write.
