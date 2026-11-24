@@ -129,6 +129,10 @@ async function fetchWithAuth(
 
   clearAuthToken(address);
 
+  if (sessionExpiredListeners.size === 0) {
+    return res;
+  }
+
   // A second 401 while the modal is already open joins the existing prompt.
   if (pendingSession) {
     return new Promise<Response>((resolve, reject) => {

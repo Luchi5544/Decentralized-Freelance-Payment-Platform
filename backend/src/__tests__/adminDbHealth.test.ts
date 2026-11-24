@@ -76,6 +76,7 @@ describe("GET /api/admin/db-health & GET /api/admin/indexer/db-health (issue #37
     h.userFindUnique.mockResolvedValueOnce({
       id: "u1",
       stellarAddress: "GREGULAR_USER",
+      sessions: [],
     });
 
     const res = await fetch(`${baseUrl}/api/admin/db-health`, {
@@ -89,6 +90,7 @@ describe("GET /api/admin/db-health & GET /api/admin/indexer/db-health (issue #37
     h.userFindUnique.mockResolvedValueOnce({
       id: "admin1",
       stellarAddress: h.admin,
+      sessions: [],
     });
 
     h.queryRawUnsafe
@@ -134,6 +136,7 @@ describe("GET /api/admin/db-health & GET /api/admin/indexer/db-health (issue #37
     h.userFindUnique.mockResolvedValueOnce({
       id: "admin1",
       stellarAddress: h.admin,
+      sessions: [],
     });
 
     h.queryRawUnsafe.mockRejectedValueOnce(new Error("Catalog query failed"));
