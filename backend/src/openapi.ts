@@ -40,7 +40,7 @@ import {
   createProposalSchema,
   transactionHistoryQuerySchema,
 } from "./lib/schemas";
-import { authSchema, updateSchema } from "./routes/users";
+import { authSchema, challengeSchema, updateSchema } from "./routes/users";
 import {
   buildCreateSchema,
   recordMilestonesSchema,
@@ -356,8 +356,22 @@ registry.registerPath({
   tags: ["Users"],
   summary: "Issue a single-use nonce for SEP-53 signing",
   description:
-    "Issues a cryptographic challenge nonce. Rate limited per IP (AUTH_RATE_LIMIT_MAX / AUTH_RATE_LIMIT_WINDOW_MS). Clients must observe RateLimit-* response headers and back off when receiving HTTP 429.",
+    "GET and POST share a limit of up to 10 challenges per minute per IP. Clients must back off when receiving HTTP 429.",
   request: { query: z.object({ address: z.string().describe("Stellar account (G…)") }) },
+  responses: {
+    200: json(z.object({ nonce: z.string() }), "The nonce, valid for 60 seconds", rateLimitHeaders),
+    400: errors[400],
+    429: errors[429],
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/users/challenge",
+  tags: ["Users"],
+  summary: "Issue a single-use nonce for SEP-53 signing",
+  description: "Shares the GET challenge endpoint's per-IP rate limit.",
+  request: { body: { content: { "application/json": { schema: challengeSchema } } } },
   responses: {
     200: json(z.object({ nonce: z.string() }), "The nonce, valid for 60 seconds", rateLimitHeaders),
     400: errors[400],

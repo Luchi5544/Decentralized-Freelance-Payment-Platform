@@ -59,7 +59,7 @@ const secret = new TextEncoder().encode(config.JWT_SECRET);
 // `prisma.authNonce` structurally satisfies the store interface.
 const nonceStore = prisma.authNonce as unknown as AuthNonceStore;
 
-const challengeSchema = z.object({ address: z.string().refine(isValidStellarAddress) });
+export const challengeSchema = z.object({ address: z.string().refine(isValidStellarAddress) });
 
 async function sendChallenge(req: Request, res: Response, next: NextFunction) {
   try {
