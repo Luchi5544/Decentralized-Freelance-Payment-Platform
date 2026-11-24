@@ -93,7 +93,8 @@ describe("Webhook API routes (issue #313)", () => {
         body: JSON.stringify({ url: `https://example.com/${suffix}` }),
       });
       expect(response.status).toBe(201);
-      secrets.push((await response.json()).secret);
+      const data = (await response.json()) as { secret: string };
+      secrets.push(data.secret);
     }
     expect(secrets).toEqual(secrets.map(() => expect.stringMatching(/^[a-f0-9]{64}$/)));
     expect(new Set(secrets).size).toBe(2);

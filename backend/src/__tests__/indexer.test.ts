@@ -32,6 +32,7 @@ import {
   type MilestoneReleaseStores,
   type RatedStores,
 } from "../indexer";
+import { MockSorobanRpcServer } from "../test/mockRpc";
 
 /** Build an ScMap the way `#[contractevent]` data is encoded. */
 function mapVal(entries: Record<string, xdr.ScVal>): xdr.ScVal {
@@ -319,7 +320,7 @@ describe("processContractEvents", () => {
     const cursor = { get: async () => 9, set: vi.fn(async () => undefined) };
     const dispatch = vi.fn(async (_event: ContractEventLike) => undefined);
 
-    const next = await processContractEvents(source, cursor, [escrow, dispute, reputation], dispatch);
+    const next = await processContractEvents(source as any, cursor, [escrow, dispute, reputation], dispatch);
 
     // One HTTP request for all three contracts, one filter holding all ids.
     expect(source.getEvents).toHaveBeenCalledTimes(1);

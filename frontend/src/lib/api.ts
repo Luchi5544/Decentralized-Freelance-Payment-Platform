@@ -122,7 +122,7 @@ async function fetchWithAuth(
   address: string | undefined,
   url: string,
   init: RequestInit,
-  token: string,
+  _token?: string,
 ): Promise<Response> {
   const res = await fetch(url, init);
   if (res.status !== 401) return res;

@@ -246,9 +246,10 @@ jobs:
             }
 
             // -- Text written by the contributor --
+            const isBot = pr.user.type === 'Bot' || pr.user.login === 'dependabot[bot]';
             const texts = [['PR title', pr.title || ''], ['PR description', pr.body || ''], ...commits.map(c => [`commit ${c.sha.slice(0, 7)} message`, c.commit.message])];
             for (const [where, text] of texts) {
-              if (HIDDEN_PROSE.test(text)) flag(where, 'contains invisible or bidirectional Unicode characters');
+              if (HIDDEN_PROSE.test(text) && !(isBot && where === 'PR description')) flag(where, 'contains invisible or bidirectional Unicode characters');
               if (AGENT_INJECTION.test(text)) flag(where, 'contains text addressed to an AI agent or reviewer');
             }
             if (/<!--[\s\S]{300,}?-->/.test(pr.body || '')) flag('PR description', 'has a long hidden HTML comment', 'note');
