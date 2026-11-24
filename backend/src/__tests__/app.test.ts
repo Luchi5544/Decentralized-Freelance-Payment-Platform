@@ -305,20 +305,20 @@ describe("POST /api/jobs skill tags", () => {
 describe("POST /api/milestones/:id/deliverables request validation", () => {
   const valid = {
     fileName: "work.zip",
-    fileUrl: "https://example.com/work.zip",
+    fileUrl: "data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==",
   };
 
   it("accepts a valid upload payload with optional metadata", () => {
     expect(
       createDeliverableSchema.parse({
         ...valid,
-        fileSize: 1024,
+        fileSize: 22,
         fileType: "application/zip",
         description: "Completed deliverables",
       }),
     ).toEqual({
       ...valid,
-      fileSize: 1024,
+      fileSize: 22,
       fileType: "application/zip",
       description: "Completed deliverables",
     });

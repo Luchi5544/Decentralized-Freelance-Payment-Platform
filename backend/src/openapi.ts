@@ -35,7 +35,7 @@ type HeadersConfig = NonNullable<ResponseConfig["headers"]>;
 
 import { config } from "./config";
 import {
-  createDeliverableSchema,
+  deliverableUploadSchema,
   createJobSchema,
   createProposalSchema,
   transactionHistoryQuerySchema,
@@ -735,10 +735,11 @@ registry.registerPath({
   path: "/api/jobs/{jobId}/milestones/{index}/deliverables",
   tags: ["Jobs"],
   summary: "Attach a deliverable to a milestone (assigned freelancer only)",
+  description: "Submit a base64 data URL for a PDF, PNG, JPEG or ZIP file up to 5 MiB.",
   security: auth,
   request: {
     params: z.object({ jobId: z.string(), index: z.coerce.number().int() }),
-    body: { content: { "application/json": { schema: createDeliverableSchema } } },
+    body: { content: { "application/json": { schema: deliverableUploadSchema } } },
   },
   responses: { 201: json(z.object({ id: z.string() }), "The deliverable"), 400: errors[400] },
 });
