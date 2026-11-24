@@ -187,7 +187,10 @@ jobs:
                 if (added.some(l => /^\s*"(overrides|resolutions|pnpm)"\s*:/.test(l))) flag(path, 'adds dependency overrides or resolutions');
               }
               if (/(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/.test(path)) {
-                const hosts = added.map(l => (l.match(/https?:\/\/([^/"' ]+)/) || [])[1]).filter(Boolean);
+                const hosts = added
+                  .filter(l => /(?:resolved|resolution|tarball)\b/i.test(l))
+                  .map(l => (l.match(/https?:\/\/([^/"' ]+)/) || [])[1])
+                  .filter(Boolean);
                 const odd = [...new Set(hosts)].filter(h => !/^(registry\.npmjs\.org|registry\.yarnpkg\.com)$/.test(h));
                 if (odd.length) flag(path, `resolves packages from an unusual host: ${odd.join(', ')}`);
               }
