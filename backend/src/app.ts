@@ -150,7 +150,10 @@ export async function createApp() {
     max: config.AUTH_RATE_LIMIT_MAX,
     store: redisStore,
   };
-  app.use("/api/users/challenge", createAuthRateLimiter(authLimit));
+  app.use("/api/users/challenge", createAuthRateLimiter({
+    windowMs: 60_000,
+    max: Math.min(10, config.AUTH_RATE_LIMIT_MAX),
+  }));
   app.use("/api/users/auth", createAuthRateLimiter(authLimit));
 
   const handleHealth = async (_req: express.Request, res: express.Response) => {
